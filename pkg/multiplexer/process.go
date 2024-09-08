@@ -4,7 +4,7 @@ import (
 	"os/exec"
 
 	"github.com/gdamore/tcell/v2"
-	tcellterm "github.com/rlcurrall/muxi/pkg/multiplexer/tcell-term"
+	tcellterm "github.com/rlcurrall/muxi/pkg/tcell-term"
 )
 
 type vterm struct {
