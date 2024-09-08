@@ -1,0 +1,11 @@
+[[commands]]
+name      = "top"
+args      = ["top"]
+autostart = true
+icon      = "🔍"
+
+[[commands]]
+name      = "Muxi Definition"
+args      = ["cat", "muxi.toml"]
+autostart = true
+icon      = "📖"
