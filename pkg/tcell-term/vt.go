@@ -2,8 +2,6 @@ package tcellterm
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"os/exec"
 	"runtime/debug"
 	"strings"
@@ -11,6 +9,7 @@ import (
 	"unicode"
 	"unsafe"
 
+	"github.com/charmbracelet/log"
 	"github.com/charmbracelet/x/xpty"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
@@ -23,7 +22,6 @@ type (
 
 // VT models a virtual terminal
 type VT struct {
-	Logger *log.Logger
 	// If true, OSC8 enables the output of OSC8 strings. Otherwise, any OSC8
 	// sequences will be stripped
 	OSC8 bool
@@ -93,7 +91,6 @@ func New() *VT {
 		tabs = append(tabs, column(i))
 	}
 	return &VT{
-		Logger: log.New(io.Discard, "", log.Flags()),
 		OSC8:   true,
 		scroll: -1,
 		selection: &selection{
@@ -306,6 +303,7 @@ func (vt *VT) Resize(w int, h int) {
 		vt.activeScreen = vt.altScreen
 	}
 
+	log.Infof("Resizing: w = %v, h = %v", w, h)
 	vt.pty.Resize(w, h)
 }
 
