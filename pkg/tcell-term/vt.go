@@ -4,15 +4,14 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"os/exec"
 	"runtime/debug"
 	"strings"
 	"sync"
-	"syscall"
 	"unicode"
+	"unsafe"
 
-	"github.com/creack/pty"
+	"github.com/charmbracelet/x/xpty"
 	"github.com/gdamore/tcell/v2"
 	"github.com/mattn/go-runewidth"
 )
@@ -57,7 +56,7 @@ type VT struct {
 	dirty        bool
 	eventHandler func(tcell.Event)
 	parser       *Parser
-	pty          *os.File
+	pty          xpty.Pty
 	surface      Surface
 	events       chan tcell.Event
 
@@ -161,18 +160,11 @@ func (vt *VT) Start(cmd *exec.Cmd) error {
 
 	// Start the command with a pty.
 	var err error
-	winsize := pty.Winsize{
-		Cols: uint16(w),
-		Rows: uint16(h),
+	vt.pty, err = xpty.NewPty(w, h)
+	if err != nil {
+		return err
 	}
-	vt.pty, err = pty.StartWithAttrs(
-		cmd,
-		&winsize,
-		&syscall.SysProcAttr{
-			Setsid:  true,
-			Setctty: true,
-			Ctty:    1,
-		})
+	err = vt.pty.Start(cmd)
 	if err != nil {
 		return err
 	}
@@ -313,25 +305,8 @@ func (vt *VT) Resize(w int, h int) {
 	default:
 		vt.activeScreen = vt.altScreen
 	}
-	/*
-		nextScrollback := [][]cell{}
-		currentRow := []cell{}
-		for _, row := range vt.primaryScrollback {
-			for col, c := range row {
-				if col >= w {
-					nextScrollback = append(nextScrollback, currentRow)
-					currentRow = []cell{}
-				}
-				currentRow = append(currentRow, c)
-			}
-		}
-		vt.primaryScrollback = nextScrollback
-	*/
 
-	_ = pty.Setsize(vt.pty, &pty.Winsize{
-		Cols: uint16(w),
-		Rows: uint16(h),
-	})
+	vt.pty.Resize(w, h)
 }
 
 func (vt *VT) width() int {
@@ -586,22 +561,27 @@ func (vt *VT) HandleEvent(e tcell.Event) bool {
 	defer vt.mu.Unlock()
 	switch e := e.(type) {
 	case *tcell.EventKey:
-		vt.pty.WriteString(keyCode(e))
+		str := keyCode(e)
+		b := unsafe.Slice(unsafe.StringData(str), len(str))
+		vt.pty.Write(b)
 		return true
 	case *tcell.EventPaste:
 		switch {
 		case vt.mode&paste == 0:
 			return false
 		case e.Start():
-			vt.pty.WriteString(info.PasteStart)
+			b := unsafe.Slice(unsafe.StringData(info.PasteStart), len(info.PasteStart))
+			vt.pty.Write(b)
 			return true
 		case e.End():
-			vt.pty.WriteString(info.PasteEnd)
+			b := unsafe.Slice(unsafe.StringData(info.PasteEnd), len(info.PasteEnd))
+			vt.pty.Write(b)
 			return true
 		}
 	case *tcell.EventMouse:
 		str := vt.handleMouse(e)
-		vt.pty.WriteString(str)
+		b := unsafe.Slice(unsafe.StringData(str), len(str))
+		vt.pty.Write(b)
 	}
 	return false
 }

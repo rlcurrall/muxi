@@ -2,6 +2,7 @@ package tcellterm
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -12,14 +13,16 @@ func (vt *VT) handleMouse(ev *tcell.EventMouse) string {
 			// Translate wheel motion into arrows up and down
 			// 3x rows
 			if ev.Buttons()&tcell.WheelUp != 0 {
-				vt.pty.WriteString(info.KeyUp)
-				vt.pty.WriteString(info.KeyUp)
-				vt.pty.WriteString(info.KeyUp)
+				b := unsafe.Slice(unsafe.StringData(info.KeyUp), len(info.KeyUp))
+				vt.pty.Write(b)
+				vt.pty.Write(b)
+				vt.pty.Write(b)
 			}
 			if ev.Buttons()&tcell.WheelDown != 0 {
-				vt.pty.WriteString(info.KeyDown)
-				vt.pty.WriteString(info.KeyDown)
-				vt.pty.WriteString(info.KeyDown)
+				b := unsafe.Slice(unsafe.StringData(info.KeyDown), len(info.KeyDown))
+				vt.pty.Write(b)
+				vt.pty.Write(b)
+				vt.pty.Write(b)
 			}
 		}
 		return ""

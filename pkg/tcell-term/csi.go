@@ -3,6 +3,7 @@ package tcellterm
 import (
 	"fmt"
 	"strings"
+	"unsafe"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -78,7 +79,10 @@ func (vt *VT) csi(csi string, params []int) {
 		resp.WriteString("22")
 		// Response terminator
 		resp.WriteString("c")
-		vt.pty.WriteString(resp.String())
+
+		str := resp.String()
+		b := unsafe.Slice(unsafe.StringData(str), len(str))
+		vt.pty.Write(b)
 	case "d":
 		vt.vpa(ps(params))
 	case "e":
@@ -103,13 +107,16 @@ func (vt *VT) csi(csi string, params []int) {
 		switch ps(params) {
 		case 5:
 			// "Ok"
-			vt.pty.WriteString("\x1B[0n")
+			str := "\x1B[0n"
+			b := unsafe.Slice(unsafe.StringData(str), len(str))
+			vt.pty.Write(b)
 		case 6:
 			// report cursor position
 			// This sequence can be identical to a function key?
 			// CSI r ; c R
-			resp := fmt.Sprintf("\x1B[%d;%dR", vt.cursor.row+1, vt.cursor.col+1)
-			vt.pty.WriteString(resp)
+			str := fmt.Sprintf("\x1B[%d;%dR", vt.cursor.row+1, vt.cursor.col+1)
+			b := unsafe.Slice(unsafe.StringData(str), len(str))
+			vt.pty.Write(b)
 		}
 	case "r":
 		vt.decstbm(params)
